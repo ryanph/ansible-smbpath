@@ -1,0 +1,37 @@
+name: build-and-release
+run-name: Build and release ${{ github.event.release.tag_name }}
+on:
+  push:
+    tags: [ 'v*.*.*' ]
+jobs:
+  install-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt update && sudo apt install ansible && sudo snap install yq
+      - name: Extract Version
+        shell: bash
+        run: echo VERSION=`cat galaxy.yml | yq -r '.version'` >> $GITHUB_OUTPUT
+        id: version
+      - name: Read CHANGELOG.md and use it as a body of new release
+        id: read_release
+        shell: bash
+        run: |
+          r=$(cat CHANGELOG.md)
+          r="${r//'%'/'%25'}"                               # Multiline escape sequences for %
+          r="${r//$'\n'/'%0A'}"                             # Multiline escape sequences for '\n'
+          r="${r//$'\r'/'%0D'}"                             # Multiline escape sequences for '\r'
+          echo "RELEASE_BODY=$r" >> $GITHUB_OUTPUT
+      - name: Build the collection
+        id: build_collection
+        shell: bash
+        run: ansible-galaxy collection build
+      - name: Create Release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: "ryanph-smbpath-${{ steps.version.outputs.VERSION }}.tar.gz"
+          tag: ${{ github.ref }}
+          overwrite: true
+          body: |
+            ${{ steps.read_release.outputs.RELEASE_BODY }} 
