@@ -10,7 +10,7 @@ Management of directories in SMB shares including complex ACLs.
 
 ```
 pip3 install pysmbc
-ansible-galaxy collection install https://github.com/ryanph/ansible-smbpath/releases/download/v1.0.0/ryanph-smbpath-1.0.0.tar.gz
+ansible-galaxy collection install https://github.com/ryanph/ansible-smbpath/releases/download/v1.0.1/ryanph-smbpath-1.0.1.tar.gz
 ```
 
 ## Module Summary
