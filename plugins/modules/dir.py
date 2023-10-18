@@ -174,7 +174,7 @@ from ansible.errors import AnsibleError
 import smbc
 import sys
 
-from ansible.collections.ryanph.smbdir.plugins.module_utils.security import dump_acl, build_acl_str_r1, conv_acl_to_int
+from ansible_collections.ryanph.smbpath.plugins.module_utils.security import dump_acl, build_acl_str_r1, conv_acl_to_int
 
 def run_module():
     

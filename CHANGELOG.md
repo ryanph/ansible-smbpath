@@ -1,1 +1,1 @@
-Initial Release including ryanph.smbpath.dir
+Fix incorrectly imported module_utils preventing the module from loading
