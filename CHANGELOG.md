@@ -1,1 +1,1 @@
-Fix incorrectly imported module_utils preventing the module from loading
+Added new parameters 'ignore_errors' and 'ignore_ace_order'

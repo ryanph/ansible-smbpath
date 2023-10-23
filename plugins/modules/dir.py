@@ -11,6 +11,7 @@ module: ryanph.smbpath.dir
 
 short_description: SMB directory management
 version_added: "1.0.0"
+
 description: Management of directories in SMB paths including complex ACLs
 
 options:
@@ -34,6 +35,17 @@ options:
             - The name of the SMB share to connect to
         type: string
         required: True
+    ignore_errors:
+        description:
+            - Whether to ignore errors when creating directories or setting ACLs.
+            - Errors will instead be returned in an 'errors' property.
+        type: boolean
+        default: False
+    ignore_ace_order:
+        description:
+            - Whether to ignore the order of ACL Entries in comparison.
+        type: boolean
+        default: True
     paths:
         description:
             - The directory paths and corresponding ACLs to configure as a dictionary.
@@ -134,39 +146,48 @@ author:
 
 EXAMPLES = r'''
     - name: Create two directories
-      ryanph.smbpath.dir:
-        smb_hostname: 192.168.1.1
-        smb_username: "DOMAIN\\user"
-        smb_password: user_password
-        smb_sharename: my_share
-        paths:
-          directory_one:
-            owner: "DOMAIN\\user"
-            group: "DOMAIN\\group"
-            acl:
-              - type: ALLOW
-                target: "DOMAIN\\user_or_group"
-                flags:
-                  - SEC_ACE_FLAG_OBJECT_INHERIT
-                  - SEC_ACE_FLAG_CONTAINER_INHERIT
-                  - SEC_ACE_FLAG_INHERIT_ONLY
-                perm:
-                  - SEC_RIGHTS_DIR_ALL
-          directory_one/subfolder:
-            owner: "DOMAIN\\user"
-            group: "DOMAIN\\group"
-            acl:
-              - type: ALLOW
-                target: "DOMAIN\\user_or_group"
-                flags:
-                  - SEC_ACE_FLAG_OBJECT_INHERIT
-                  - SEC_ACE_FLAG_CONTAINER_INHERIT
-                  - SEC_ACE_FLAG_INHERIT_ONLY
-                perm:
-                  - SEC_RIGHTS_DIR_ALL
+        ryanph.smbpath.dir:
+            smb_hostname: 192.168.1.1
+            smb_username: "DOMAIN\\user"
+            smb_password: user_password
+            smb_sharename: my_share
+            paths:
+                directory_one:
+                    owner: "DOMAIN\\user"
+                    group: "DOMAIN\\group"
+                    acl:
+                        - type: ALLOW
+                          target: "DU\\user_or_group"
+                          flags:
+                            - SEC_ACE_FLAG_OBJECT_INHERIT
+                            - SEC_ACE_FLAG_CONTAINER_INHERIT
+                            - SEC_ACE_FLAG_INHERIT_ONLY
+                          perm:
+                            - SEC_RIGHTS_DIR_ALL
+                directory_one/subfolder:
+                    owner: "DOMAIN\\user"
+                    group: "DOMAIN\\group"
+                    acl:
+                        - type: ALLOW
+                          target: "DOMAIN\\user_or_group"
+                          flags:
+                            - SEC_ACE_FLAG_OBJECT_INHERIT
+                            - SEC_ACE_FLAG_CONTAINER_INHERIT
+                            - SEC_ACE_FLAG_INHERIT_ONLY
+                          perm:
+                            - SEC_RIGHTS_DIR_ALL
 '''
 
-RETURN = r'''
+RETURNs = r'''
+    changed: True
+    changes:
+        - "Created smb://192.168.1.1/my_share/directory_one"
+        - "Set ACL on smb://192.168.1.1/my_share/directory_one to ..."
+        - "Created smb://192.168.1.1/my_share/directory_one/subfolder"
+        - "Set ACL on smb://192.168.1.1/my_share/directory_one/subfolder to ..."
+    paths:
+        directory_one: <acl object>
+        directory_one/subfolder: <acl object>
 '''
 
 from ansible.module_utils.basic import AnsibleModule
@@ -174,7 +195,7 @@ from ansible.errors import AnsibleError
 import smbc
 import sys
 
-from ansible_collections.ryanph.smbpath.plugins.module_utils.security import dump_acl, build_acl_str_r1, conv_acl_to_int
+from ansible_collections.ryanph.smbpath.plugins.module_utils.security import dump_acl, build_acl_str_r1, conv_acl_to_int, diff_acl
 
 def run_module():
     
@@ -183,9 +204,11 @@ def run_module():
         smb_password=dict(type='str', required=False, no_log=True),
         smb_hostname=dict(type='str', required=True),
         smb_sharename=dict(type='str',required=True),
-        paths=dict(type='dict',required=True),
+        ignore_errors=dict(type='bool', default=False),
+        ignore_ace_order=dict(type='bool', default=True),
+        paths=dict(type='dict', required=True),
         state=dict(type='str', required=False, default='present'),
-        check_mode=dict(type='bool',default=False)
+        check_mode=dict(type='bool', default=False)
     )
 
     result = dict(
@@ -193,6 +216,7 @@ def run_module():
         original_message='',
         message='',
         changes=[],
+        errors=[],
         paths={}
     )
 
@@ -252,7 +276,8 @@ def run_module():
                     ))
 
             # Compare and update extended attributes if required
-            if c_xattr != d_xattr:
+            diffs = diff_acl(c_xattr, d_xattr, module.params['ignore_ace_order'])
+            if diffs != None:
                 if module.check_mode:
                     result['changed'] = True
                     result['changes'].append("Would set ACL on {} to {} (from {})".format(
@@ -266,7 +291,10 @@ def run_module():
                                 smbc.XATTR_FLAG_REPLACE
                                 )
                     except ValueError:
-                        raise AnsibleError("Failed to apply ACL {}. ".format(d_xattr) +
+                        if module.params['ignore_errors']:
+                            result['errors'].append("Failed to apply ACL {} to {}. ".format(d_xattr, smb_uri))
+                            continue
+                        raise AnsibleError("Failed to apply ACL {} to {}. ".format(d_xattr, smb_uri) +
                                            "This usually means an identifier is unresolvable or incorrect. " +
                                            "Please check all identifiers and try again.")
                     result['changed'] = True

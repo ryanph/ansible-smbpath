@@ -10,7 +10,7 @@ Management of directories in SMB shares including complex ACLs.
 
 ```
 pip3 install pysmbc
-ansible-galaxy collection install https://github.com/ryanph/ansible-smbpath/releases/download/v1.0.1/ryanph-smbpath-1.0.1.tar.gz
+ansible-galaxy collection install https://github.com/ryanph/ansible-smbpath/releases/download/v1.0.2/ryanph-smbpath-1.0.2.tar.gz
 ```
 
 ## Module Summary
@@ -41,6 +41,17 @@ options:
       - The name of the SMB share to connect to
     type: string
     required: True
+  ignore_errors:
+      description:
+          - Whether to ignore errors when creating directories or setting ACLs.
+          - Errors will instead be returned in an 'errors' property.
+      type: boolean
+      default: False
+  ignore_ace_order:
+      description:
+          - Whether to ignore the order of ACL Entries in comparison.
+      type: boolean
+      default: True
   paths:
     description:
       - The directory paths and corresponding ACLs to configure as a dictionary.
