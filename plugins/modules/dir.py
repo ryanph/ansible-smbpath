@@ -156,7 +156,7 @@ EXAMPLES = r'''
                     owner: "DOMAIN\\user"
                     group: "DOMAIN\\group"
                     acl:
-                        - type: ALLOW
+                        - ace_type: ALLOW
                           target: "DU\\user_or_group"
                           flags:
                             - SEC_ACE_FLAG_OBJECT_INHERIT
@@ -168,7 +168,7 @@ EXAMPLES = r'''
                     owner: "DOMAIN\\user"
                     group: "DOMAIN\\group"
                     acl:
-                        - type: ALLOW
+                        - ace_type: ALLOW
                           target: "DOMAIN\\user_or_group"
                           flags:
                             - SEC_ACE_FLAG_OBJECT_INHERIT

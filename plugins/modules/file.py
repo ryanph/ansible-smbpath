@@ -150,6 +150,15 @@ EXAMPLES = r'''
                 flags: []
                 perm:
                 - SEC_RIGHTS_FILE_ALL
+
+-   name: Create an empty file that inherits existing permissions
+    ryanph.smbpath.file:
+        smb_hostname: 192.168.1.1
+        smb_username: "DOMAIN\\user"
+        smb_password: user_password
+        smb_sharename: my_share
+        paths: path/to/file.txt
+
 '''
 
 RETURNs = r'''
@@ -176,9 +185,9 @@ def run_module():
         smb_sharename=dict(type='str',required=True),
         ignore_ace_order=dict(type='bool', default=True),
         file_path=dict(type='str', required=True),
-        owner=dict(type='str', required=True),
-        group=dict(type='str', required=True),
-        acl=dict(type='list', required=True),
+        owner=dict(type='str', required=False, default=None),
+        group=dict(type='str', required=False, default=None),
+        acl=dict(type='list', required=False, default=None),
         state=dict(type='str', required=False, default='present', choices=['present']),
         check_mode=dict(type='bool', default=False)
     )
@@ -187,13 +196,13 @@ def run_module():
         changed=False,
         original_message='',
         message='',
-        changes=[],
-        path=None
+        changes=[]
     )
 
     module = AnsibleModule(
         argument_spec=module_args,
-        supports_check_mode=True
+        supports_check_mode=True,
+        required_together=['owner','group','acl']
     )
 
     # Setup Context
@@ -229,6 +238,11 @@ def run_module():
             else:
                 result['changed'] = True
                 result['changes'].append("Would create {}".format(smb_uri))
+
+        if module.params['owner'] is None:
+            if c_xattr is not None:
+                result['xattr'] = dump_acl(c_xattr)
+            module.exit_json(**result)
 
         # Generate the desired extended attributes value
         # Compare and update extended attributes if required

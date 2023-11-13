@@ -163,7 +163,7 @@ options:
         owner: "DOMAIN\\user"
         group: "DOMAIN\\group"
         acl:
-          - type: ALLOW
+          - ace_type: ALLOW
             target: "DOMAIN\\user_or_group"
             flags:
               - SEC_ACE_FLAG_OBJECT_INHERIT
@@ -327,4 +327,12 @@ options:
         flags: []
         perm:
           - SEC_RIGHTS_FILE_ALL
+
+-   name: Create a blank file that inherits permissions
+    ryanph.smbpath.file:
+        smb_hostname: 192.168.1.1
+        smb_username: "DOMAIN\\user"
+        smb_password: user_password
+        smb_sharename: my_share
+        paths: path/to/file.txt
 ```
