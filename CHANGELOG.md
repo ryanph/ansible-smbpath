@@ -1,1 +1,1 @@
-Added new parameters 'ignore_errors' and 'ignore_ace_order'
+Added ryanph.smbpath.file
