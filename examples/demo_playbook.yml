@@ -1,0 +1,122 @@
+---
+- hosts: all
+  gather_facts: no
+  connection: local
+  vars:
+    _smb:
+      hostname: 192.168.99.34
+      username: "user1"
+      password: "password1P"
+      sharename: share
+    owner: "SERVER22\\user1"
+    read_group: "SERVER22\\read_users"
+    write_group: "SERVER22\\write_users"
+    traverse_group: "SERVER22\\traverse_users"
+
+  tasks:
+    - name: Create two directories with specific ACLs
+      ryanph.smbpath.dir:
+        smb_hostname: "{{ _smb.hostname }}"
+        smb_username: "{{ _smb.username }}"
+        smb_password: "{{ _smb.password }}"
+        smb_sharename: "{{ _smb.sharename }}"
+        paths:
+          example_one:
+            owner: "{{ owner }}"
+            group: "BUILTIN\\Administrators"
+            acl:
+              - ace_type: ALLOW
+                target: "{{ read_group }}"
+                flags:
+                  - SEC_ACE_FLAG_OBJECT_INHERIT
+                  - SEC_ACE_FLAG_CONTAINER_INHERIT
+                perm:
+                  - SEC_RIGHTS_DIR_READ
+              - ace_type: ALLOW
+                target: "{{ traverse_group }}"
+                flags:
+                  - SEC_ACE_FLAG_OBJECT_INHERIT
+                  - SEC_ACE_FLAG_CONTAINER_INHERIT
+                perm:
+                  - SEC_DIR_TRAVERSE
+              - ace_type: ALLOW
+                target: "{{ write_group }}"
+                flags:
+                  - SEC_ACE_FLAG_OBJECT_INHERIT
+                  - SEC_ACE_FLAG_CONTAINER_INHERIT
+                perm:
+                  - SEC_RIGHTS_DIR_ALL
+          example_two:
+            owner: "{{ owner }}"
+            group: "BUILTIN\\Administrators"
+            acl:
+              - ace_type: ALLOW
+                target: "{{ write_group }}"
+                flags:
+                  - SEC_ACE_FLAG_OBJECT_INHERIT
+                  - SEC_ACE_FLAG_CONTAINER_INHERIT
+                perm:
+                  - SEC_RIGHTS_DIR_ALL
+
+    - name: Create an empty file
+      ryanph.smbpath.file:
+        smb_hostname: "{{ _smb.hostname }}"
+        smb_username: "{{ _smb.username }}"
+        smb_password: "{{ _smb.password }}"
+        smb_sharename: "{{ _smb.sharename }}"
+        file_path: example_one/a_file.txt
+        owner: "{{ owner }}"
+        group: "BUILTIN\\Administrators"
+        acl:
+            -   ace_type: ALLOW
+                target: "{{ write_group }}"
+                flags: []
+                perm:
+                - SEC_RIGHTS_FILE_ALL
+
+    - name: Create an empty file that inherits existing permissions
+      ryanph.smbpath.file:
+        smb_hostname: "{{ _smb.hostname }}"
+        smb_username: "{{ _smb.username }}"
+        smb_password: "{{ _smb.password }}"
+        smb_sharename: "{{ _smb.sharename }}"
+        file_path: example_one/b_file.txt
+
+    - name: Move and rename a directory
+      ryanph.smbpath.rename:
+        smb_username: "{{ _smb.username }}"
+        smb_password: "{{ _smb.password }}"
+        smb_hostname: "{{ _smb.hostname }}"
+        smb_sharename: "{{ _smb.sharename }}"
+        old_path: example_one
+        new_path: example_two/example_one_moved
+      delegate_to: localhost
+
+    - name: Delete specified file
+      ryanph.smbpath.file:
+        smb_hostname: "{{ _smb.hostname }}"
+        smb_username: "{{ _smb.username }}"
+        smb_password: "{{ _smb.password }}"
+        smb_sharename: "{{ _smb.sharename }}"
+        file_path: example_two/example_one_moved/a_file.txt
+        state: absent
+
+    - name: Delete specified file
+      ryanph.smbpath.file:
+        smb_hostname: "{{ _smb.hostname }}"
+        smb_username: "{{ _smb.username }}"
+        smb_password: "{{ _smb.password }}"
+        smb_sharename: "{{ _smb.sharename }}"
+        file_path: example_two/example_one_moved/b_file.txt
+        state: absent
+
+    - name: Delete two directories
+      ryanph.smbpath.dir:
+        smb_hostname: "{{ _smb.hostname }}"
+        smb_username: "{{ _smb.username }}"
+        smb_password: "{{ _smb.password }}"
+        smb_sharename: "{{ _smb.sharename }}"
+        paths:
+          example_two/example_one_moved: {}
+          example_two: {}
+        state: absent

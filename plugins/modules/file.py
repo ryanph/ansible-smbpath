@@ -10,7 +10,7 @@ DOCUMENTATION = r'''
 module: ryanph.smbpath.file
 
 short_description: SMB file management
-version_added: "1.1.0"
+version_added: "1.2.0"
 
 description: Management of files in SMB shares with complex ACLs
 
@@ -129,6 +129,7 @@ options:
         type: string
         choices:
             - present
+            - absent
         default: present
 author:
     - Ryan Parker-Hill (@ryanph)
@@ -141,7 +142,7 @@ EXAMPLES = r'''
         smb_username: "DOMAIN\\user"
         smb_password: user_password
         smb_sharename: my_share
-        paths: path/to/file.txt
+        file_path: path/to/file.txt
         owner: "DOMAIN\\user"
         group: "DOMAIN\\group"
         acl:
@@ -157,7 +158,7 @@ EXAMPLES = r'''
         smb_username: "DOMAIN\\user"
         smb_password: user_password
         smb_sharename: my_share
-        paths: path/to/file.txt
+        file_path: path/to/file.txt
 
 '''
 
@@ -188,14 +189,12 @@ def run_module():
         owner=dict(type='str', required=False, default=None),
         group=dict(type='str', required=False, default=None),
         acl=dict(type='list', required=False, default=None),
-        state=dict(type='str', required=False, default='present', choices=['present']),
+        state=dict(type='str', required=False, default='present', choices=['present', 'absent']),
         check_mode=dict(type='bool', default=False)
     )
 
     result = dict(
         changed=False,
-        original_message='',
-        message='',
         changes=[]
     )
 
@@ -279,7 +278,16 @@ def run_module():
         result['xattr'] = dump_acl(c_xattr)
 
     elif module.params['state'] == 'absent':
-        raise AnsibleError("Module does not yet support deletion")
+        try:
+            ctx.unlink(smb_uri)
+            result['changed'] = True
+            result['changes'].append("Deleted {}".format(smb_uri))
+        except smbc.NoEntryError:
+            pass
+        except Exception as e:
+            raise AnsibleError("An unhandled exception occurred while attempting to delete {} {}".format(
+                smb_uri, e
+            ))
 
     module.exit_json(**result)
 

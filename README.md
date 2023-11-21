@@ -1,6 +1,6 @@
 # Ansible Collection - ryanph.smbpath
 
-Management of directories in SMB shares including complex ACLs.
+Management of files directories in SMB shares including complex ACLs.
 
 ## Requirements
 
@@ -10,7 +10,7 @@ Management of directories in SMB shares including complex ACLs.
 
 ```
 pip3 install pysmbc
-ansible-galaxy collection install https://github.com/ryanph/ansible-smbpath/releases/download/v1.1.1/ryanph-smbpath-1.1.1.tar.gz
+ansible-galaxy collection install https://github.com/ryanph/ansible-smbpath/releases/download/v1.2.0/ryanph-smbpath-1.2.0.tar.gz
 ```
 
 ## Directory Management ryanph.smbpath.dir
@@ -183,14 +183,90 @@ options:
               - SEC_ACE_FLAG_INHERIT_ONLY
             perm:
               - SEC_RIGHTS_DIR_ALL
+
+- name: Delete some directories
+  ryanph.smbpath.dir:
+    smb_hostname: 192.168.1.1
+    smb_username: "DOMAIN\\user"
+    smb_password: user_password
+    smb_sharename: my_share
+    paths:
+      example_two/example_one_moved: {}
+      example_two: {}
+    state: absent
+```
+
+## Rename ryanph.smbpath.rename
+
+### Documentation
+```
+module: ryanph.smbpath.file
+
+short_description: SMB file or directory rename / move
+version_added: "1.2.0"
+
+description: SMB file or directory rename / move. Successful if the path is renamed, or the old path does not exist AND the new path exists.
+
+options:
+    smb_hostname:
+        description:
+            - The hostname or IP address of the SMB server to connect to
+        type: string
+        required: True
+    smb_username:
+        description:
+            - The username to authenticate with when connecting to the SMB server
+        type: string
+        required: True
+    smb_password:
+        description:
+            - The password to authenticate with when connecting to the SMB server
+        type: string
+        required: True
+    smb_sharename:
+        description:
+            - The name of the SMB share to connect to
+        type: string
+        required: True
+    ignore_ace_order:
+        description:
+            - Whether to ignore the order of ACL Entries in comparison.
+        type: boolean
+        default: True
+    old_path:
+        description:
+            - The path to the source file or directory relative to the root of the SMB share
+    new_path:
+        description:
+            - The new path relative to the root of the SMB share
+author:
+    - Ryan Parker-Hill (@ryanph)
+```
+
+### Examples
+
+```
+    - name: Move and rename a directory
+      ryanph.smbpath.rename:
+        smb_username: "user1"
+        smb_password: "password1"
+        smb_hostname: "192.168.100.1"
+        smb_sharename: "my_share"
+        old_path: example_one
+        new_path: example_two/example_one_moved
+      delegate_to: localhost
 ```
 
 ## File Management ryanph.smbpath.file
 
+### Notes
+
+Does not support file contents yet, just creating files with a specific ACL and deleting.
+
 ### Documentation
 ```
 short_description: SMB file management
-version_added: "1.1.0"
+version_added: "1.2.0"
 
 description: Management of files in SMB shares with complex ACLs
 

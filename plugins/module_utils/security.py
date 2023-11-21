@@ -21,15 +21,18 @@ def diff_acl(a, b, ignore_ace_order=True):
     for ace in b['acl']:
         b_strs.append(build_ace_str(ace['target'], ace['ace_type'], ace['flags'], ace['perm']))
 
+    if ignore_ace_order:
+        a_strs.sort()
+        b_strs.sort()
+
     if len(a_strs) != len(b_strs):
         diffs.append('ACL Length Mismatch: {} != {}'.format(len(a_strs), len(b_strs)))
     else:
-        if ignore_ace_order:
-            if a_strs.sort() != b_strs.sort():
-                diffs.append(str(a_strs.sort() - b_strs.sort()))
-        else:
-            for i in range(len(a_strs)):
-                if a_strs[i] != b_strs[i]:
+        for i in range(len(a_strs)):
+            if a_strs[i] != b_strs[i]:
+                if ignore_ace_order:
+                    diffs.append("ACE missing: {}".format(a_strs[i]))
+                else:
                     diffs.append("ACE found in incorrect location: {}".format(a_strs[i]))
                     break
 
